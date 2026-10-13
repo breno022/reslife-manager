@@ -1,0 +1,14 @@
+# Build output
+target/
+
+# Local SQLite database (recreated from schema.sql + seed.sql on startup)
+*.db
+
+# IDE / OS files
+.settings/
+.classpath
+.project
+.idea/
+*.iml
+.vscode/
+.DS_Store
