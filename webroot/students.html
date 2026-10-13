@@ -1,0 +1,146 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Students (ResLife)</title>
+
+<h1>Student Records</h1>
+
+<h2>Add / Edit Student</h2>
+<input id="id" placeholder="id (blank = new)" disabled>
+<input id="sid" placeholder="sid (unique)">
+<input id="studentName" placeholder="name">
+<input id="grade" type="number" placeholder="grade 6-12">
+<input id="dorm" placeholder="dorm">
+<input id="room" placeholder="room (optional)">
+<button id="save">Save</button>
+<button id="clear">Clear</button>
+<p id="msg"></p>
+
+<h2>All Students</h2>
+<table border="1">
+  <thead><tr><th>ID</th><th>SID</th><th>Name</th><th>Grade</th><th>Dorm</th><th>Room</th><th>Backlog</th><th>Updated</th><th>Actions</th></tr></thead>
+  <tbody id="tb"></tbody>
+  <button onclick="changeBacklog(${s.id}, -1)">-1</button>
+  <button onclick="changeBacklog(${s.id}, +1)">+1</button>
+  <button onclick="showAudit(${s.id})">Audit</button>
+</table>
+<script>
+	const sidEl = document.getElementById('sid');
+	const studentNameEl = document.getElementById('studentName');
+	const gradeEl = document.getElementById('grade');
+	const dormEl = document.getElementById('dorm');
+	const roomEl = document.getElementById('room');
+	
+	async function load() {
+  const r = await fetch('/api/students', {cache:'no-store'});
+  const rows = await r.json();
+  tb.innerHTML = rows.map(s => `
+    <tr>
+      <td>${s.id}</td><td>${s.sid}</td><td>${s.name}</td><td>${s.grade}</td>
+      <td>${s.dorm}</td><td>${s.room ?? ''}</td><td>${s.backlog}</td><td>${s.updatedAt}</td>
+      <td>
+		<button onclick='edit(${JSON.stringify(s)})'>Edit</button>
+		<button onclick='del(${s.id}, ${JSON.stringify(s.sid)}, ${JSON.stringify(s.name)})'>Delete</button>
+		<button onclick="changeBacklog(${s.id}, -1)">-1</button>
+		<button onclick="changeBacklog(${s.id}, +1)">+1</button>
+		<button onclick="showAudit(${s.id})">Audit</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function edit(s) {
+  id.value = s.id;
+  sid.value = s.sid;
+  studentName.value = s.name;
+  grade.value = s.grade;
+  dorm.value = s.dorm;
+  room.value = s.room ?? '';
+}
+
+async function del(studentId, sid, name) {
+  const typed = prompt(`To delete ${name} (${sid}), type the SID exactly to confirm:`);
+
+  // user hit cancel
+  if (typed === null) {
+    msg.textContent = "Delete cancelled.";
+    return;
+  }
+
+  if (typed.trim() !== sid) {
+    msg.textContent = "Delete cancelled: confirmation SID did not match.";
+    return;
+  }
+
+  const r = await fetch('/api/students/' + studentId, { method: 'DELETE' });
+
+  const text = await r.text();
+  let j;
+  try { j = JSON.parse(text); } catch { j = { ok:false, error:text }; }
+
+  msg.textContent = (r.ok && j.ok) ? 'Deleted' : `ERROR (${r.status}): ${j.error || text}`;
+  load();
+}
+
+async function changeBacklog(studentId, delta) {
+  const r = await fetch('/api/students/' + studentId + '/backlog', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ delta: delta, actor: "reslife1" })
+  });
+
+  const text = await r.text();
+  let j;
+  try { j = JSON.parse(text); } catch { j = { ok:false, error:text }; }
+
+  msg.textContent = (r.ok && j.ok)
+    ? `Backlog: ${j.old} → ${j.new}` + (j.released ? ` Released (notified ${j.notified})` : '')
+    : `ERROR (${r.status}): ${j.error || text}`;
+
+  load(); // refresh table so backlog updates appear
+}
+
+async function showAudit(studentId) {
+  const r = await fetch('/api/students/' + studentId + '/audit', {cache:'no-store'});
+  const text = await r.text();
+  let rows;
+  try { rows = JSON.parse(text); } catch { alert(text); return; }
+
+  alert(rows.map(x => `${x.ts}: ${x.oldValue} → ${x.newValue} (Δ${x.delta}) by ${x.actor}`).join('\n') || "No audit yet.");
+}
+
+save.onclick = async () => {
+	const payload = {
+	  sid: sidEl.value,
+	  name: studentNameEl.value,
+	  grade: +gradeEl.value,
+	  dorm: dormEl.value,
+	  room: roomEl.value
+	};
+  const isEdit = id.value && id.value !== '';
+  const url = isEdit ? ('/api/students/' + id.value) : '/api/students';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  const r = await fetch(url, {
+    method,
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const j = await r.json();
+  msg.textContent = j.ok ? 'Saved!' : j.error;
+  if (j.ok) clearForm();
+  load();
+};
+
+function clearForm() {
+  id.value = '';
+  sid.value = '';
+  studentName.value = '';
+  grade.value = '';
+  dorm.value = '';
+  room.value = '';
+}
+
+clear.onclick = () => { clearForm(); msg.textContent=''; };
+
+load();
+</script>

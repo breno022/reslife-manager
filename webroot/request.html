@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>Study Hall Request</title>
+<h1>Submit Study Hall Request</h1>
+<label>Student SID: <input id="studentSid" placeholder="e.g., S12345"></label>
+<label>Date: <input id="d" type="date"></label>
+<br><label>Reason:</label><br>
+<textarea id="reason" rows="3" cols="50" placeholder="Why does the student need study hall? (max 300 chars)"></textarea>
+<br>
+<button id="send">Submit</button>
+<p id="msg"></p>
+<script>
+send.onclick = async () => {
+	const body = {
+	  studentSid: studentSid.value.trim(),
+	  date: d.value,
+	  reason: reason.value.trim()
+	};
+  const r = await fetch('/request', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const text = await r.text();
+  msg.textContent = `HTTP ${r.status}: ${text}`;
+};
+</script>

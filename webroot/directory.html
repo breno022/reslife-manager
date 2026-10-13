@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8">
+<title>Main Directory</title>
+<h1>Main Directory</h1>
+<p id="who"></p>
+<button id="logout">Logout</button>
+
+<ul id="list"></ul>
+
+<script>
+async function load() {
+  const me = await (await fetch('/api/me')).json();
+  if (!me.ok) { window.location = '/login.html'; return; }
+  who.textContent = `Logged in as ${me.username} (${me.role})`;
+
+  const pages = await (await fetch('/api/pages', {cache:'no-store'})).json();
+  list.innerHTML = pages.map(p => `<li><a href="${p.url}">${p.title}</a></li>`).join('');
+}
+
+logout.onclick = async () => {
+  await fetch('/api/logout', {method:'POST'});
+  window.location = '/login.html';
+};
+
+load();
+</script>

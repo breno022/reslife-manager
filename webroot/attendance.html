@@ -1,0 +1,78 @@
+<!doctype html><meta charset="utf-8">
+<title>Attendance (ResLife)</title>
+
+<h1>Study Hall Attendance</h1>
+
+<label>Student SID: <input id="studentSid" placeholder="S12345"></label>
+<label>Staff: <input id="staff" value="reslife1"></label>
+<button id="toggle">Check-in / Check-out</button>
+<br><label>Status:
+  <select id="punctual">
+    <option value="">-- select --</option>
+    <option value="ON_TIME">On time</option>
+    <option value="LATE">Late</option>
+  </select>
+</label>
+<label>Minutes late:
+  <input id="minutesLate" type="number" min="0" value="0">
+</label>
+
+<p id="msg"></p>
+
+<h2>Open Sessions</h2>
+<table border="1">
+	<thead>
+	  <tr><th>SID</th><th>Name</th><th>Staff</th><th>On time?</th><th>Minutes late</th></tr>
+	</thead>
+  <tbody id="tb"></tbody>
+</table>
+
+<script>
+const tb = document.getElementById('tb');
+
+async function loadOpen() {
+  const r = await fetch('/api/attendance/open', { cache: 'no-store' });
+  const text = await r.text();
+  let rows;
+  try { rows = JSON.parse(text); } catch { msg.textContent = `ERROR (${r.status}): ${text}`; return; }
+
+  tb.innerHTML = rows.map(x => `
+    <tr>
+      <td>${x.sid}</td>
+      <td>${x.name}</td>
+      <td>${x.inStaff}</td>
+      <td>${x.onTime}</td>
+      <td>${x.minutesLate}</td>
+    </tr>
+  `).join('');
+}
+
+toggle.onclick = async () => {
+  const onTimeVal =
+    punctual.value === "ON_TIME" ? "YES" :
+    punctual.value === "LATE" ? "NO" : "";
+
+  const body = {
+    studentSid: studentSid.value.trim(),
+    staff: staff.value.trim(),
+    onTime: onTimeVal,
+    minutesLate: +minutesLate.value
+  };
+  const r = await fetch('/api/attendance/toggle', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const text = await r.text();
+  let j;
+  try { j = JSON.parse(text); } catch { j = { ok:false, error:text }; }
+
+  msg.textContent = (r.ok && j.ok)
+    ? (j.action === "CHECK_IN" ? "Checked in " : `Checked out (${j.durationM} min)`)
+    : `ERROR (${r.status}): ${j.error || text}`;
+  loadOpen();
+};
+loadOpen();
+setInterval(loadOpen, 3000);
+</script>

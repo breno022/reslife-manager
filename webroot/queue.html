@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>ResLife Queue</title>
+<h1>Incoming Requests</h1>
+<table border="1"><thead><tr><th>ID</th><th>Student</th><th>Date</th><th>Status</th><th>Created</th><th>Reason</th></tr></thead>
+<tbody id="tb"></tbody>
+</table>
+<script>
+const tb = document.getElementById('tb');
+async function load() {
+  const r = await fetch('/api/queue', { cache: 'no-store' });
+  const rows = await r.json();
+  tb.innerHTML = rows.map(x => `
+    <tr>
+      <td>${x.id}</td>
+      <td>${x.student}</td>
+      <td>${x.date}</td>
+      <td>${x.status}</td>
+      <td>${x.createdAt}</td>
+	  <td>${x.reason ?? ''}</td>
+    </tr>
+  `).join('');
+}
+load();
+setInterval(load, 3000);
+</script>

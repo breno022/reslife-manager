@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8">
+<title>My Requests (Teacher)</title>
+<h1>My Requests</h1>
+<p id="msg"></p>
+
+<table border="1">
+  <thead>
+    <tr><th>ID</th><th>Student</th><th>Date</th><th>Reason</th><th>Status</th><th>Created</th></tr>
+  </thead>
+  <tbody id="tb"></tbody>
+</table>
+
+<script>
+const tb = document.getElementById('tb');
+
+async function load() {
+  const me = await (await fetch('/api/me')).json();
+  if (!me.ok) { window.location = '/login.html'; return; }
+
+  const r = await fetch('/api/my_requests', {cache:'no-store'});
+  const text = await r.text();
+  let rows;
+  try { rows = JSON.parse(text); } catch { msg.textContent = `ERROR (${r.status}): ${text}`; return; }
+
+  // If backend returns an {ok:false} error object
+  if (!Array.isArray(rows)) {
+    msg.textContent = `ERROR (${r.status}): ${rows.error || text}`;
+    return;
+  }
+
+  tb.innerHTML = rows.map(x => `
+    <tr>
+      <td>${x.id}</td>
+      <td>${x.studentName} (${x.studentSid})</td>
+      <td>${x.date}</td>
+      <td>${x.reason}</td>
+      <td>${x.status}</td>
+      <td>${x.createdAt}</td>
+    </tr>
+  `).join('');
+}
+
+load();
+</script>

@@ -1,0 +1,53 @@
+<!doctype html><meta charset="utf-8">
+<title>Notifications</title>
+
+<h1>ResLife Notifications</h1>
+<p id="msg"></p>
+
+<table border="1">
+  <thead><tr><th>Time</th><th>Student</th><th>Message</th><th>Status</th><th></th></tr></thead>
+  <tbody id="tb"></tbody>
+</table>
+
+<h2>Release History</h2>
+<table border="1">
+  <thead><tr><th>Time</th><th>Student</th><th>Actor</th></tr></thead>
+  <tbody id="rb"></tbody>
+</table>
+
+<script>
+const tb = document.getElementById('tb');
+const rb = document.getElementById('rb');
+
+async function load() {
+  const r = await fetch('/api/notifications', {cache:'no-store'});
+  const rows = await r.json();
+  tb.innerHTML = rows.map(n => `
+    <tr>
+      <td>${n.createdAt}</td>
+      <td>${n.name} (${n.sid})</td>
+      <td>${n.message}</td>
+      <td>${n.isRead ? "Read" : "Unread"}</td>
+      <td>${n.isRead ? "" : `<button onclick="markRead(${n.id})">Mark read</button>`}</td>
+    </tr>
+  `).join('');
+}
+
+async function markRead(id) {
+  const r = await fetch('/api/notifications/' + id + '/read', {method:'POST'});
+  const j = await r.json();
+  msg.textContent = j.ok ? "Marked read" : j.error;
+  load();
+}
+
+async function loadReleases() {
+  const r = await fetch('/api/releases', {cache:'no-store'});
+  const rows = await r.json();
+  rb.innerHTML = rows.map(x => `
+    <tr><td>${x.ts}</td><td>${x.name} (${x.sid})</td><td>${x.actor}</td></tr>
+  `).join('');
+}
+
+load(); loadReleases();
+setInterval(() => { load(); loadReleases(); }, 3000);
+</script>
