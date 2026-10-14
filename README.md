@@ -39,7 +39,7 @@ webroot/                Front-end pages
 
 ## Running it
 
-You need Java 17+ and Maven. From the project root:
+Needs Java 17+ and Maven. From the project root:
 
 ```bash
 mvn compile exec:java
